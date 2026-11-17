@@ -13,13 +13,13 @@ Nothing is sent to a cloud service.
 
 ## Usage
 
-Install once: `ln -sf ~/nas-s3-sync/redact.sh ~/.local/bin/nas-redact`, then from any folder:
+Install once (run inside the repo; rerun it if you move the repo): `ln -sfn "$PWD/redact.sh" ~/.local/bin/nas-redact`, then from any folder:
 
 ```bash
 nas-redact "AP INVOICE"                      # -> AP INVOICE-redacted, next to it
 nas-redact --dry-run "AP INVOICE"            # show what would happen, write nothing
 nas-redact --share /mnt/nas/CSD              # a twin for every top-level folder in the share
-nas-redact                                   # every share in config.toml
+nas-redact                                   # everything listed in config.toml (shares + folders)
 nas-redact --no-llm ...                      # regex + OCR only (fast; no Ollama)
 nas-redact --force ...                       # redo files whose twin copy is up to date
 ```
@@ -77,13 +77,74 @@ couldn't read clearly (usually handwriting) are blacked out too. Every scanned f
 ## Setup
 
 ```bash
-cp config.example.toml config.toml     # list the shares, Ollama settings
+cp config.example.toml config.toml     # list your shares/folders, Ollama settings
 ```
 
 - Shares are mounted read/write under `/mnt/nas/<SHARE>` with a dedicated NAS user (e.g.
   `redactor`), credentials in `/etc/nas-credentials` (mode 600).
-- Ollama: `ollama run gemma4 "hi"` must answer.
+- Local AI model: see [Setting up the local model](#setting-up-the-local-model-ollama) below.
 - The first run creates `.venv` and installs the dependencies (PyMuPDF, RapidOCR, lxml).
+
+## Setting up the local model (Ollama)
+
+The model runs on this PC through [Ollama](https://ollama.com). No document text is sent to the
+internet. You can skip all of this and run with `--no-llm` (regex + OCR only), but the model
+catches more amounts (amounts in words, garbled handwriting, Excel columns judged by header).
+
+**What the PC needs**
+
+| | Minimum | This setup |
+|---|---|---|
+| RAM | 16 GB | 32 GB |
+| Disk | ~10 GB free for the model | |
+| GPU | Optional (NVIDIA makes it much faster) | RTX 2060, 6 GB |
+
+`gemma4` is ~8 GB, so on a 6 GB card part of it runs on the CPU. It works, just slower.
+
+**1. Install Ollama** (Linux, once)
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+This installs the `ollama` command and a background service that starts with the PC.
+On Mac or Windows, download the installer from https://ollama.com/download.
+
+**2. Download the model** (once, ~8 GB)
+
+```bash
+ollama pull gemma4
+ollama list                      # gemma4 should be listed
+```
+
+**3. Check it answers**
+
+```bash
+ollama run gemma4 "hi"           # should reply within a minute
+curl -s localhost:11434/api/tags # shows the installed models as JSON
+```
+
+**4. Point the tool at it** (in `config.toml`; these are the defaults)
+
+```toml
+[ollama]
+enabled = true
+model = "gemma4"
+url = "http://localhost:11434"
+```
+
+To try a different model for one run: `nas-redact --model qwen3:8b`. To turn the model off for
+good, set `enabled = false`.
+
+**Troubleshooting**
+
+| Problem | Fix |
+|---|---|
+| `Ollama is not running` | `sudo systemctl start ollama` (check: `systemctl status ollama`) |
+| `ollama run` fails or errors about `llama-server` | Re-run the install command from step 1; it repairs the install |
+| `model not found` | `ollama pull gemma4` |
+| Very slow | Normal on CPU-only PCs; use `--no-llm` for a quick pass, or a smaller model |
+| Run stops halfway with `STOPPED:` | Ollama crashed or ran out of memory; close other heavy apps, restart it with `sudo systemctl restart ollama`, then run again (finished files are skipped) |
 
 ## Tests
 

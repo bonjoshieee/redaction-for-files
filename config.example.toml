@@ -15,6 +15,6 @@ folders = [
 # max_redact_mb = 200     # bigger files are left out of the twin
 
 [ollama]
-enabled = true            # ask the local model for names, addresses, bank accounts, birthdates
+enabled = true            # ask the local model which numbers are money amounts
 model = "gemma4"
 url = "http://localhost:11434"
