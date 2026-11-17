@@ -5,10 +5,10 @@ import pytest
 from nas_s3_sync.redact import contains_pii, redact
 
 
-def test_redacts_emails():
+def test_emails_are_kept_only_amounts_are_redacted():
     out, count = redact("CERES SUMMIT CORPORATION Email: ops@ceres.ph Ref 1680000")
-    assert out == "CERES SUMMIT CORPORATION Email: [EMAIL_REDACTED] Ref 1680000"
-    assert count == 1
+    assert out == "CERES SUMMIT CORPORATION Email: ops@ceres.ph Ref 1680000"
+    assert count == 0
 
 
 @pytest.mark.parametrize(
@@ -95,8 +95,8 @@ def test_leaves_alone(text):
         ("123-45-6789", "[SSN_REDACTED]"),
     ],
 )
-def test_redacts_government_ids(value, tag):
-    assert redact(f"Contact: {value} today") == (f"Contact: {tag} today", 1)
+def test_government_ids_are_kept(value, tag):
+    assert redact(f"Contact: {value} today") == (f"Contact: {value} today", 0)
 
 
 def test_does_not_match_inside_a_longer_digit_run():
@@ -105,7 +105,7 @@ def test_does_not_match_inside_a_longer_digit_run():
 
 
 def test_contains_pii_agrees_with_redact():
-    assert contains_pii("email ops@ceres.ph")
+    assert not contains_pii("email ops@ceres.ph")
     assert not contains_pii("call 0917 123 4567")
     assert contains_pii("total 2887352.33")
     assert contains_pii("total 2,887,352.33")

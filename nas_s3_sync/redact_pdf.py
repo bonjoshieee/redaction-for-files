@@ -23,9 +23,11 @@ class EncryptedPdfError(Exception):
     """The PDF is password-protected; nothing can be read without the password."""
 
 
-def redact_pdf(data: bytes) -> tuple[bytes, int]:
+def redact_pdf(data: bytes, ocr_pages: list[int] | tuple = ()) -> tuple[bytes, int]:
     """Returns the redacted PDF bytes and the number of matches removed.
 
+    ocr_pages (1-based) are scanned pages to read with Tesseract first (see ocr_pdf); this
+    raises ocr_pdf.ScanNotConfident when one of them can't be read well enough.
     When nothing matches, the original bytes are returned unchanged with a count of 0.
     """
     with _LOCK:
@@ -47,9 +49,30 @@ def redact_pdf(data: bytes) -> tuple[bytes, int]:
                     count += len(hits)
                 if boxes:
                     page.apply_redactions()
+            if ocr_pages:
+                from .ocr_pdf import redact_scanned_pages
+
+                count += redact_scanned_pages(doc, list(ocr_pages))
             if count == 0:
                 return data, 0
             return doc.tobytes(garbage=3, deflate=True), count
+        finally:
+            doc.close()
+
+
+def pdf_unreadable_pages(data: bytes) -> list[int]:
+    """1-based numbers of pages that carry images but no text: scans whose content can't be
+    checked without OCR. Blank pages don't count."""
+    with _LOCK:
+        doc = pymupdf.open(stream=data, filetype="pdf")
+        try:
+            if doc.needs_pass:
+                raise EncryptedPdfError("PDF is password-protected")
+            return [
+                page.number + 1
+                for page in doc
+                if not page.get_text("text").strip() and page.get_images(full=False)
+            ]
         finally:
             doc.close()
 

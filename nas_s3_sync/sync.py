@@ -248,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
     here = Path(__file__).resolve().parent.parent
     ap = argparse.ArgumentParser(prog="sync.sh", description=__doc__.splitlines()[0])
     ap.add_argument("folders", nargs="*", help="folder names from the config (default: all)")
-    ap.add_argument("--config", type=Path, default=here / "config.toml")
+    ap.add_argument("--config", type=Path, default=here / "config.s3.toml")
     ap.add_argument("--dry-run", action="store_true", help="list what would upload; change nothing")
     args = ap.parse_args(argv)
 

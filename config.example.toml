@@ -1,17 +1,20 @@
-# Copy to config.toml (git-ignored) and list the NAS shares to upload.
+# Copy to config.toml (git-ignored). Used when ./redact.sh is run without folders.
 
-bucket = "envicomm-nas-datahub"
-region = "ap-southeast-1"
-profile = "nas-s3-sync"   # ~/.aws profile for the upload-only IAM user
+# Each share gets a twin <folder>-redacted next to every top-level folder inside it.
+shares = [
+  # "/mnt/nas/CSD",
+  # "/mnt/nas/MPAL",
+]
 
-# Folder name = top-level prefix in the bucket; path = where the NAS share is mounted.
-# Files land at <name>/<path inside the share>, redacted copies at redacted/<name>/...
-[folders]
-MPAL = "/mnt/nas/MPAL"
-YARENA = "/mnt/nas/YARENA"
-RBULAWIN = "/mnt/nas/RBULAWIN"
+# Single folders: each gets <folder>-redacted next to it. ~ is allowed.
+folders = [
+  # "~/Music/AP INVOICE",
+]
 
-# Optional:
-# exclude_dirs = ["@eaDir", "#recycle", "#snapshot"]   # Synology system folders (default)
-# workers = 4            # parallel uploads
-# max_redact_mb = 200    # bigger files are uploaded without a redacted copy
+# exclude_dirs = ["@eaDir", "#recycle", "#snapshot", ".@__thumb", "@Recycle"]
+# max_redact_mb = 200     # bigger files are left out of the twin
+
+[ollama]
+enabled = true            # ask the local model for names, addresses, bank accounts, birthdates
+model = "gemma4"
+url = "http://localhost:11434"

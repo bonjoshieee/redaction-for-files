@@ -1,0 +1,17 @@
+# S3 upload (switched off for now). To use: copy to config.s3.toml and run ./sync.sh --config config.s3.toml
+
+bucket = "envicomm-nas-datahub"
+region = "ap-southeast-1"
+profile = "nas-s3-sync"   # ~/.aws profile for the upload-only IAM user
+
+# Folder name = top-level prefix in the bucket; path = where the NAS share is mounted.
+# Files land at <name>/<path inside the share>, redacted copies at redacted/<name>/...
+[folders]
+MPAL = "/mnt/nas/MPAL"
+YARENA = "/mnt/nas/YARENA"
+RBULAWIN = "/mnt/nas/RBULAWIN"
+
+# Optional:
+# exclude_dirs = ["@eaDir", "#recycle", "#snapshot"]   # Synology system folders (default)
+# workers = 4            # parallel uploads
+# max_redact_mb = 200    # bigger files are uploaded without a redacted copy

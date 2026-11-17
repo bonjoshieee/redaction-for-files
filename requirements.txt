@@ -1,2 +1,6 @@
 boto3>=1.35
 pymupdf>=1.24
+rapidocr>=3
+onnxruntime>=1.20
+lxml>=5
+numpy>=1.26

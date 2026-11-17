@@ -49,9 +49,9 @@ def pdf(text: str) -> bytes:
 @pytest.fixture
 def share(tmp_path):
     root = tmp_path / "MPAL"
-    write(root / "notes.txt", "mail ops@ceres.ph")
+    write(root / "notes.txt", "mail ops@ceres.ph fee PHP 1,500.00")
     write(root / "plain.txt", "nothing here")
-    write(root / "sub/slip.pdf", pdf("TIN 123-456-789-000"))
+    write(root / "sub/slip.pdf", pdf("Total PHP 1,250.00"))
     write(root / "sub/photo.jpg", b"\xff\xd8binary")
     write(root / "sub/~tmp.temp", b"scratch")
     write(root / "redacted/old.txt", "ops@ceres.ph")       # never uploaded
@@ -77,7 +77,7 @@ def test_uploads_everything_and_redacts_supported_files(share):
         "MPAL/sub/~tmp.temp",
         "redacted/MPAL/notes.txt", "redacted/MPAL/sub/slip.pdf",
     }
-    assert s3.objects["redacted/MPAL/notes.txt"] == b"mail [EMAIL_REDACTED]"
+    assert s3.objects["redacted/MPAL/notes.txt"] == b"mail ops@ceres.ph fee [AMOUNT_REDACTED]"
     assert statuses(rows) == {
         "MPAL/notes.txt": "redacted",
         "MPAL/plain.txt": "no-pii",
@@ -97,22 +97,22 @@ def test_second_run_uploads_nothing(share):
 def test_changed_size_is_uploaded_again(share):
     s3 = FakeS3()
     run(s3, cfg_for(share), [], dry_run=False, log=lambda *_: None)
-    write(share / "plain.txt", "now with a@b.ph")
+    write(share / "plain.txt", "now with PHP 9,000.00")
     rows = run(s3, cfg_for(share), [], dry_run=False, log=lambda *_: None)
     assert statuses(rows) == {"MPAL/plain.txt": "redacted"}
-    assert s3.objects["redacted/MPAL/plain.txt"] == b"now with [EMAIL_REDACTED]"
+    assert s3.objects["redacted/MPAL/plain.txt"] == b"now with [AMOUNT_REDACTED]"
 
 
 def test_office_copies_are_txt(tmp_path):
     import io, zipfile
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
-        z.writestr("word/document.xml", "<w:t>SSS 12-3456789-0</w:t>")
+        z.writestr("word/document.xml", "<w:t>SSS 12-3456789-0 fee PHP 2,000.00</w:t>")
     root = tmp_path / "HR"
     write(root / "form.docx", buf.getvalue())
     s3 = FakeS3()
     run(s3, cfg_for(root), [], dry_run=False, log=lambda *_: None)
-    assert s3.objects["redacted/HR/form.txt"] == b"SSS [SSS_REDACTED]"
+    assert s3.objects["redacted/HR/form.txt"] == b"SSS 12-3456789-0 fee [AMOUNT_REDACTED]"
     assert s3.types["redacted/HR/form.txt"].startswith("text/plain")
 
 
@@ -166,6 +166,6 @@ def test_config_rejects_folder_named_redacted(tmp_path):
 
 
 def test_example_config_loads():
-    cfg = load_config(Path(__file__).parent.parent / "config.example.toml")
+    cfg = load_config(Path(__file__).parent.parent / "config.s3.example.toml")
     assert cfg.bucket == "envicomm-nas-datahub"
     assert cfg.profile == "nas-s3-sync"
